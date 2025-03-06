@@ -1,14 +1,253 @@
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Body Styling */
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7fa;
+    color: #333;
 }
-.sidebar {
-    position: fixed;
-    height: 100%;
+
+/* Main Content Area */
+.bg-white {
+    width: 80%; /* Matches inline style */
+    background-color: #fff;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+/* Wide Cards with Shadow & Hover Glow */
+.card {
+    width: 100%;
+    max-width: 400px; /* Wider cards */
+    margin: 15px auto;
+    border: none;
+    border-radius: 12px;
+    background-color: #fff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important; /* Override Bootstrap */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3) !important;
+}
+
+.card-body {
+    padding: 20px;
+    text-align: center;
+}
+
+.card-body h5 {
+    font-size: 1.25rem;
+    margin-bottom: 10px;
+    color: #007bff;
+}
+
+.card-body p {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Sidebar with Glassmorphism */
+.sidebar.bg-dark {
+    width: 20%; /* Matches inline style */
+    height: 100vh;
+    background: linear-gradient(135deg, rgba(30, 45, 68, 0.9), rgba(45, 65, 95, 0.7)) !important; /* Override bg-dark */
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding-top: 20px;
+    color: #fff;
+    position: fixed;
+    top: 0;
+    left: 0;
 }
-.sidebar a:hover {
-    background-color: #555;
+
+.sidebar h4 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0.75rem 1rem; /* Matches inline .p-3 */
 }
-.main-content {
-    margin-left: 20%;
+
+.sidebar .profile-img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px; /* Adjusted from inline 10px */
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.sidebar .profile-img:hover {
+    transform: scale(1.05);
+}
+
+.sidebar p.mb-2 {
+    margin-bottom: 0.5rem; /* Matches inline .mb-2 */
+    font-size: 1.1rem;
+}
+
+.sidebar p.mb-4.text-muted {
+    margin-bottom: 1.5rem; /* Adjusted from inline 4rem for balance */
+    font-size: 0.9rem;
+    color: #adb5bd !important; /* Matches Bootstrap .text-muted */
+}
+
+/* Navigation Enhancements */
+.sidebar .nav {
+    width: 100%;
+    padding: 0 10px;
+}
+
+.sidebar .nav-item {
+    margin: 5px 0;
+}
+
+.sidebar .nav-link {
+    display: block;
+    padding: 12px 20px;
+    color: #fff !important; /* Override Bootstrap */
+    text-decoration: none;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #00d4ff !important;
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+/* Logout Link */
+.sidebar .mt-auto.p-3 a {
+    color: #ff6b6b !important;
+    text-decoration: none;
+    padding: 12px 20px; /* Matches inline .p-3 */
+    transition: color 0.3s ease;
+    display: block;
+}
+
+.sidebar .mt-auto.p-3 a:hover {
+    color: #ff8787 !important;
+}
+
+/* Button Styling */
+.btn {
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border: none;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    border: none;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border: none;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border: none;
+}
+
+.btn:hover {
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Input & Search Bar Styling */
+.form-control, .form-select {
+    border-radius: 10px;
+    border: 1px solid #ced4da;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 10px 15px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+    outline: none;
+}
+
+/* Search Bar Specific */
+.form-control[id^="search"] {
+    width: 50%;
+    max-width: 500px;
+    margin: 0 auto 20px auto;
+    display: block;
+}
+
+/* Table Styling */
+.table {
+    background-color: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.table th, .table td {
+    padding: 15px;
+    vertical-align: middle;
+}
+
+.table th {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar.bg-dark {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+
+    .bg-white {
+        width: 100%;
+    }
+
+    .sidebar .nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .sidebar .nav-link {
+        padding: 10px 15px;
+    }
+
+    .card {
+        max-width: 100%;
+    }
+
+    .form-control[id^="search"] {
+        width: 100%;
+    }
 }

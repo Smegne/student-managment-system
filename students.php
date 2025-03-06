@@ -2,30 +2,50 @@
 include 'includes/header.php';
 check_login('Admin');
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $first_name = $conn->real_escape_string($_POST['first_name']);
-    $last_name = $conn->real_escape_string($_POST['last_name']);
+// Add new student
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_student'])) {
+    $user_id = $conn->real_escape_string($_POST['user_id']);
+    $check = $conn->prepare("SELECT id FROM students WHERE user_id = ?");
+    $check->bind_param("i", $user_id);
+    $check->execute();
+    $result = $check->get_result();
+    if ($result->num_rows == 0) {
+        $sql = "INSERT INTO students (user_id) VALUES (?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+    } else {
+        echo "<div class='alert alert-warning'>This student is already registered.</div>";
+    }
+}
+
+// Edit student
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_student'])) {
+    $student_id = $conn->real_escape_string($_POST['student_id']);
     $birthdate = $_POST['birthdate'];
     $gender = $_POST['gender'];
     $address = $conn->real_escape_string($_POST['address']);
     $phone = $conn->real_escape_string($_POST['phone']);
-    $email = $conn->real_escape_string($_POST['email']);
-    $conn->query("INSERT INTO students (first_name, last_name, birthdate, gender, address, phone, email) 
-                  VALUES ('$first_name', '$last_name', '$birthdate', '$gender', '$address', '$phone', '$email')");
+    
+    $sql = "UPDATE students SET birthdate = ?, gender = ?, address = ?, phone = ? WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ssssi", $birthdate, $gender, $address, $phone, $student_id);
+    $stmt->execute();
+}
+
+// Delete student
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_student'])) {
+    $student_id = $conn->real_escape_string($_POST['student_id']);
+    $sql = "DELETE FROM students WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $student_id);
+    $stmt->execute();
 }
 ?>
 <h2>Students</h2>
-<!-- Search Bar -->
-<form method="GET" class="mb-3">
-    <input type="text" name="name" placeholder="Search by Name" class="form-control d-inline w-25">
-    <select name="gender" class="form-select d-inline w-25">
-        <option value="">Search by Gender</option>
-        <option value="Male">Male</option>
-        <option value="Female">Female</option>
-        <option value="Other">Other</option>
-    </select>
-    <button type="submit" class="btn btn-primary">Search</button>
-</form>
+<div class="mb-3">
+    <input type="text" id="searchStudent" class="form-control w-50" placeholder="Search by Name">
+</div>
 <!-- Add Student Button -->
 <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addStudentModal">Add New Student</button>
 <!-- Add Student Modal -->
@@ -35,40 +55,106 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="modal-header"><h5>Add Student</h5></div>
             <div class="modal-body">
                 <form method="POST">
-                    <input type="text" name="first_name" class="form-control mb-2" placeholder="First Name" required>
-                    <input type="text" name="last_name" class="form-control mb-2" placeholder="Last Name" required>
-                    <input type="date" name="birthdate" class="form-control mb-2" required>
-                    <select name="gender" class="form-select mb-2" required>
+                    <div class="mb-3">
+                        <label for="user_id" class="form-label">Select Student</label>
+                        <select name="user_id" id="user_id" class="form-select" onchange="fetchUserDetails(this)" required>
+                            <option value="">-- Select a Student --</option>
+                            <?php
+                            $users = $conn->query("SELECT id, first_name, last_name FROM users WHERE role = 'Student'");
+                            while ($user = $users->fetch_assoc()) {
+                                echo "<option value='{$user['id']}'>{$user['first_name']} {$user['last_name']}</option>";
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div id="user_details" class="mb-3">
+                        <p><strong>Name:</strong> <span id="display_name"></span></p>
+                        <p><strong>Email:</strong> <span id="display_email"></span></p>
+                    </div>
+                    <button type="submit" name="add_student" class="btn btn-primary">Add Student</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Edit Student Modal -->
+<div class="modal fade" id="editStudentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5>Edit Student Details</h5></div>
+            <div class="modal-body">
+                <form method="POST" id="editStudentForm">
+                    <input type="hidden" name="student_id" id="edit_student_id">
+                    <input type="date" name="birthdate" id="edit_birthdate" class="form-control mb-2">
+                    <select name="gender" id="edit_gender" class="form-select mb-2">
+                        <option value="">Select Gender</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                         <option value="Other">Other</option>
                     </select>
-                    <textarea name="address" class="form-control mb-2" placeholder="Address" required></textarea>
-                    <input type="text" name="phone" class="form-control mb-2" placeholder="Phone" required>
-                    <input type="email" name="email" class="form-control mb-2" placeholder="Email" required>
-                    <button type="submit" class="btn btn-primary">Add Student</button>
+                    <textarea name="address" id="edit_address" class="form-control mb-2" placeholder="Address"></textarea>
+                    <input type="text" name="phone" id="edit_phone" class="form-control mb-2" placeholder="Phone">
+                    <button type="submit" name="edit_student" class="btn btn-primary">Update Student</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 <!-- Student Table -->
-<?php
-$where = "";
-if (isset($_GET['name']) && !empty($_GET['name'])) {
-    $name = $conn->real_escape_string($_GET['name']);
-    $where .= " WHERE first_name LIKE '%$name%' OR last_name LIKE '%$name%'";
+<div id="studentResults">
+    <?php
+    $students = $conn->query("SELECT s.*, u.first_name, u.last_name, u.email 
+                              FROM students s 
+                              JOIN users u ON s.user_id = u.id 
+                              WHERE u.role = 'Student'");
+    echo "<table class='table'><tr><th>ID</th><th>Name</th><th>Email</th><th>Gender</th><th>Actions</th></tr>";
+    while ($student = $students->fetch_assoc()) {
+        echo "<tr><td>{$student['id']}</td><td>{$student['first_name']} {$student['last_name']}</td><td>{$student['email']}</td><td>{$student['gender']}</td>
+              <td><button class='btn btn-warning edit-student' data-id='{$student['id']}' 
+                  data-birthdate='{$student['birthdate']}' data-gender='{$student['gender']}' 
+                  data-address='{$student['address']}' data-phone='{$student['phone']}' 
+                  data-bs-toggle='modal' data-bs-target='#editStudentModal'>Edit</button>
+                  <form method='POST' style='display:inline;' onsubmit='return confirm(\"Are you sure you want to delete this student?\");'>
+                      <input type='hidden' name='student_id' value='{$student['id']}'>
+                      <button type='submit' name='delete_student' class='btn btn-danger'>Delete</button>
+                  </form></td></tr>";
+    }
+    echo "</table>";
+    ?>
+</div>
+
+<script>
+function fetchUserDetails(select) {
+    const userId = select.value;
+    if (userId) {
+        fetch(`get_user_details.php?user_id=${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('display_name').textContent = `${data.first_name} ${data.last_name}`;
+                document.getElementById('display_email').textContent = data.email;
+            });
+    } else {
+        document.getElementById('display_name').textContent = '';
+        document.getElementById('display_email').textContent = '';
+    }
 }
-if (isset($_GET['gender']) && !empty($_GET['gender'])) {
-    $gender = $conn->real_escape_string($_GET['gender']);
-    $where .= ($where ? " AND" : " WHERE") . " gender = '$gender'";
-}
-$students = $conn->query("SELECT * FROM students $where");
-echo "<table class='table'><tr><th>ID</th><th>Name</th><th>Email</th><th>Actions</th></tr>";
-while ($student = $students->fetch_assoc()) {
-    echo "<tr><td>{$student['id']}</td><td>{$student['first_name']} {$student['last_name']}</td><td>{$student['email']}</td>
-          <td><button class='btn btn-warning'>Edit</button> <button class='btn btn-danger'>Delete</button></td></tr>";
-}
-echo "</table>";
-include 'includes/footer.php';
-?>
+document.getElementById('searchStudent').addEventListener('input', function() {
+    const query = this.value;
+    fetch(`search_admin.php?section=students&query=${encodeURIComponent(query)}`)
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('studentResults').innerHTML = data;
+        });
+});
+document.querySelectorAll('.edit-student').forEach(button => {
+    button.addEventListener('click', function() {
+        document.getElementById('edit_student_id').value = this.dataset.id;
+        document.getElementById('edit_birthdate').value = this.dataset.birthdate || '';
+        document.getElementById('edit_gender').value = this.dataset.gender || '';
+        document.getElementById('edit_address').value = this.dataset.address || '';
+        document.getElementById('edit_phone').value = this.dataset.phone || '';
+    });
+});
+</script>
+
+<?php include 'includes/footer.php'; ?>
