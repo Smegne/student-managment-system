@@ -1,0 +1,14 @@
+body {
+    font-family: Arial, sans-serif;
+}
+.sidebar {
+    position: fixed;
+    height: 100%;
+    padding-top: 20px;
+}
+.sidebar a:hover {
+    background-color: #555;
+}
+.main-content {
+    margin-left: 20%;
+}
