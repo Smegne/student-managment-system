@@ -9,10 +9,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_enrollment'])) {
     $enrollment_date = $conn->real_escape_string($_POST['enrollment_date']);
     $status = $conn->real_escape_string($_POST['status']);
     
-    $sql = "INSERT INTO enrollments (student_id, course_id, enrollment_date, status) VALUES (?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iiss", $student_id, $course_id, $enrollment_date, $status);
-    $stmt->execute();
+    // Check for duplicate enrollment
+    if (check_duplicate($conn, 'enrollments', ['student_id' => $student_id, 'course_id' => $course_id])) {
+        echo "<div class='alert alert-warning'>This student is already registered in this course!</div>";
+    } else {
+        $sql = "INSERT INTO enrollments (student_id, course_id, enrollment_date, status) VALUES (?, ?, ?, ?)";
+        $result = safe_insert($conn, $sql, "iiss", $student_id, $course_id, $enrollment_date, $status);
+        if ($result['success']) {
+            echo "<div class='alert alert-success'>Enrollment added successfully!</div>";
+        } else {
+            echo "<div class='alert alert-danger'>Error adding enrollment: " . $result['error'] . "</div>";
+        }
+    }
 }
 
 // Edit enrollment
@@ -24,18 +32,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_enrollment'])) {
     $status = $conn->real_escape_string($_POST['status']);
     
     $sql = "UPDATE enrollments SET student_id = ?, course_id = ?, enrollment_date = ?, status = ? WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iissi", $student_id, $course_id, $enrollment_date, $status, $enrollment_id);
-    $stmt->execute();
+    $result = safe_execute($conn, $sql, "iissi", $student_id, $course_id, $enrollment_date, $status, $enrollment_id);
+    if ($result['success']) {
+        echo "<div class='alert alert-success'>Enrollment updated successfully!</div>";
+    } else {
+        echo "<div class='alert alert-danger'>Error updating enrollment: " . $result['error'] . "</div>";
+    }
 }
 
 // Delete enrollment
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_enrollment'])) {
     $enrollment_id = $conn->real_escape_string($_POST['enrollment_id']);
     $sql = "DELETE FROM enrollments WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $enrollment_id);
-    $stmt->execute();
+    $result = safe_execute($conn, $sql, "i", $enrollment_id);
+    if ($result['success']) {
+        echo "<div class='alert alert-success'>Enrollment deleted successfully!</div>";
+    } else {
+        echo "<div class='alert alert-danger'>Error deleting enrollment: " . $result['error'] . "</div>";
+    }
 }
 ?>
 <h2>Enrollments</h2>

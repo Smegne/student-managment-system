@@ -11,28 +11,45 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
     $last_name = $conn->real_escape_string($_POST['last_name']);
     $email = $conn->real_escape_string($_POST['email']);
     
-    $profile_image = 'default-avatar.png';
-    if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == 0) {
-        $allowed_types = ['image/jpeg', 'image/png'];
-        $file_type = $_FILES['profile_image']['type'];
-        if (in_array($file_type, $allowed_types)) {
-            $target_dir = "assets/images/";
-            $file_name = basename($_FILES['profile_image']['name']);
-            $target_file = $target_dir . time() . "_" . $file_name;
-            if (!file_exists($target_dir)) {
-                mkdir($target_dir, 0777, true);
-            }
-            if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $target_file)) {
-                $profile_image = basename($target_file);
+    // Check for duplicate username
+    if (check_duplicate($conn, 'users', 'username', $username)) {
+        echo "<div class='alert alert-warning'>This user already exists!</div>";
+    }
+    // Check for duplicate email
+    elseif (check_duplicate($conn, 'users', 'email', $email)) {
+        echo "<div class='alert alert-warning'>This email is already registered!</div>";
+    }
+    else {
+        $profile_image = 'default-avatar.png';
+        if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == 0) {
+            $allowed_types = ['image/jpeg', 'image/png'];
+            $file_type = $_FILES['profile_image']['type'];
+            if (in_array($file_type, $allowed_types)) {
+                $target_dir = "assets/images/";
+                $file_name = basename($_FILES['profile_image']['name']);
+                $target_file = $target_dir . time() . "_" . $file_name;
+                if (!file_exists($target_dir)) {
+                    mkdir($target_dir, 0777, true);
+                }
+                if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $target_file)) {
+                    $profile_image = basename($target_file);
+                } else {
+                    echo "<div class='alert alert-danger'>Failed to upload profile image.</div>";
+                }
+            } else {
+                echo "<div class='alert alert-danger'>Invalid file type. Only JPG and PNG are allowed.</div>";
             }
         }
-    }
 
-    $sql = "INSERT INTO users (username, password, role, first_name, last_name, email, profile_image) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("sssssss", $username, $password, $role, $first_name, $last_name, $email, $profile_image);
-    $stmt->execute();
+        $sql = "INSERT INTO users (username, password, role, first_name, last_name, email, profile_image) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $result = safe_insert($conn, $sql, "sssssss", $username, $password, $role, $first_name, $last_name, $email, $profile_image);
+        if ($result['success']) {
+            echo "<div class='alert alert-success'>User added successfully!</div>";
+        } else {
+            echo "<div class='alert alert-danger'>Error adding user: " . $result['error'] . "</div>";
+        }
+    }
 }
 
 // Edit user
@@ -51,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
     $result = $stmt->get_result();
     $current_user = $result->fetch_assoc();
     $profile_image = $current_user['profile_image'];
+    $stmt->close();
 
     if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == 0) {
         $allowed_types = ['image/jpeg', 'image/png'];
@@ -70,18 +88,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
     }
 
     $sql = "UPDATE users SET username = ?, role = ?, first_name = ?, last_name = ?, email = ?, profile_image = ? WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssssssi", $username, $role, $first_name, $last_name, $email, $profile_image, $user_id);
-    $stmt->execute();
+    $result = safe_execute($conn, $sql, "ssssssi", $username, $role, $first_name, $last_name, $email, $profile_image, $user_id);
+    if ($result['success']) {
+        echo "<div class='alert alert-success'>User updated successfully!</div>";
+    } else {
+        echo "<div class='alert alert-danger'>Error updating user: " . $result['error'] . "</div>";
+    }
 }
 
 // Delete user
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
     $user_id = $conn->real_escape_string($_POST['user_id']);
     $sql = "DELETE FROM users WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
+    $result = safe_execute($conn, $sql, "i", $user_id);
+    if ($result['success']) {
+        echo "<div class='alert alert-success'>User deleted successfully!</div>";
+    } else {
+        echo "<div class='alert alert-danger'>Error deleting user: " . $result['error'] . "</div>";
+    }
 }
 ?>
 <h2>Users</h2>

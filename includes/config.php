@@ -1,5 +1,4 @@
 <?php
-// Start session only if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -24,6 +23,49 @@ function check_login($required_role = null) {
             header("Location: dashboard.php?section=home");
         }
         exit();
+    }
+}
+
+function check_duplicate($conn, $table, $conditions) {
+    $where_clause = implode(' AND ', array_map(fn($key) => "$key = ?", array_keys($conditions)));
+    $sql = "SELECT id FROM $table WHERE $where_clause";
+    $stmt = $conn->prepare($sql);
+    $types = str_repeat('s', count($conditions)); // Default to string; adjust if needed
+    $values = array_values($conditions);
+    $stmt->bind_param($types, ...$values);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $exists = $result->num_rows > 0;
+    $stmt->close();
+    return $exists;
+}
+
+function safe_insert($conn, $sql, $types, ...$params) {
+    try {
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param($types, ...$params);
+        $success = $stmt->execute();
+        $error = $success ? null : $conn->error;
+        $stmt->close();
+        return ['success' => $success, 'error' => $error];
+    } catch (mysqli_sql_exception $e) {
+        if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+            return ['success' => false, 'error' => 'Duplicate entry detected'];
+        }
+        return ['success' => false, 'error' => $e->getMessage()];
+    }
+}
+
+function safe_execute($conn, $sql, $types, ...$params) {
+    try {
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param($types, ...$params);
+        $success = $stmt->execute();
+        $error = $success ? null : $conn->error;
+        $stmt->close();
+        return ['success' => $success, 'error' => $error];
+    } catch (mysqli_sql_exception $e) {
+        return ['success' => false, 'error' => $e->getMessage()];
     }
 }
 ?>
