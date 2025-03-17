@@ -14,23 +14,44 @@ function check_login($required_role = null) {
         header("Location: login.php");
         exit();
     }
-    if ($required_role && $_SESSION['role'] !== $required_role) {
-        if ($_SESSION['role'] == 'Admin') {
-            header("Location: dashboard.php?section=home");
-        } elseif ($_SESSION['role'] == 'Instructor') {
-            header("Location: instructor_dashboard.php");
-        } elseif ($_SESSION['role'] == 'Student') {
-            header("Location: dashboard.php?section=home");
+    // Normalize role case to match database
+    $user_role = strtolower($_SESSION['role']);
+    $required_role = $required_role ? strtolower($required_role) : null;
+    
+    if ($required_role && $user_role !== $required_role) {
+        switch ($user_role) {
+            case 'admin':
+                header("Location: dashboard.php?section=home");
+                break;
+            case 'teacher': // Match database 'teacher', not 'Instructor'
+                header("Location: instructor_dashboard.php");
+                break;
+            case 'student':
+                header("Location: dashboard.php?section=home");
+                break;
+            default:
+                header("Location: login.php"); // Fallback for invalid roles
+                break;
         }
         exit();
     }
 }
 
 function check_duplicate($conn, $table, $conditions) {
+    // Validate $conditions is an array
+    if (!is_array($conditions) || empty($conditions)) {
+        throw new InvalidArgumentException("Conditions must be a non-empty array");
+    }
+    
     $where_clause = implode(' AND ', array_map(fn($key) => "$key = ?", array_keys($conditions)));
     $sql = "SELECT id FROM $table WHERE $where_clause";
     $stmt = $conn->prepare($sql);
-    $types = str_repeat('s', count($conditions)); // Default to string; adjust if needed
+    
+    if ($stmt === false) {
+        throw new RuntimeException("Prepare failed: " . $conn->error);
+    }
+    
+    $types = str_repeat('s', count($conditions)); // Assumes all are strings; adjust if needed
     $values = array_values($conditions);
     $stmt->bind_param($types, ...$values);
     $stmt->execute();
@@ -43,6 +64,9 @@ function check_duplicate($conn, $table, $conditions) {
 function safe_insert($conn, $sql, $types, ...$params) {
     try {
         $stmt = $conn->prepare($sql);
+        if ($stmt === false) {
+            throw new RuntimeException("Prepare failed: " . $conn->error);
+        }
         $stmt->bind_param($types, ...$params);
         $success = $stmt->execute();
         $error = $success ? null : $conn->error;
@@ -59,6 +83,9 @@ function safe_insert($conn, $sql, $types, ...$params) {
 function safe_execute($conn, $sql, $types, ...$params) {
     try {
         $stmt = $conn->prepare($sql);
+        if ($stmt === false) {
+            throw new RuntimeException("Prepare failed: " . $conn->error);
+        }
         $stmt->bind_param($types, ...$params);
         $success = $stmt->execute();
         $error = $success ? null : $conn->error;

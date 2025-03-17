@@ -1,30 +1,33 @@
 <?php
 include 'includes/header.php';
-check_login('Admin');
+check_login('admin'); // Use lowercase to match database
 
 // Add new user
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
-    $username = $conn->real_escape_string($_POST['username']);
+    $username = $_POST['username'];
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    $role = $conn->real_escape_string($_POST['role']);
-    $first_name = $conn->real_escape_string($_POST['first_name']);
-    $last_name = $conn->real_escape_string($_POST['last_name']);
-    $email = $conn->real_escape_string($_POST['email']);
+    $role = strtolower($_POST['role']); // Normalize to match database
+    $first_name = $_POST['first_name'];
+    $last_name = $_POST['last_name'];
+    $email = $_POST['email'];
     
     // Check for duplicate username
-    if (check_duplicate($conn, 'users', 'username', $username)) {
-        echo "<div class='alert alert-warning'>This user already exists!</div>";
+    if (check_duplicate($conn, 'users', ['username' => $username])) {
+        echo "<div class='alert alert-warning'>This username already exists!</div>";
     }
     // Check for duplicate email
-    elseif (check_duplicate($conn, 'users', 'email', $email)) {
+    elseif (check_duplicate($conn, 'users', ['email' => $email])) {
         echo "<div class='alert alert-warning'>This email is already registered!</div>";
     }
     else {
         $profile_image = 'default-avatar.png';
         if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == 0) {
             $allowed_types = ['image/jpeg', 'image/png'];
+            $max_size = 2 * 1024 * 1024; // 2MB limit
             $file_type = $_FILES['profile_image']['type'];
-            if (in_array($file_type, $allowed_types)) {
+            $file_size = $_FILES['profile_image']['size'];
+            
+            if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
                 $target_dir = "assets/images/";
                 $file_name = basename($_FILES['profile_image']['name']);
                 $target_file = $target_dir . time() . "_" . $file_name;
@@ -37,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
                     echo "<div class='alert alert-danger'>Failed to upload profile image.</div>";
                 }
             } else {
-                echo "<div class='alert alert-danger'>Invalid file type. Only JPG and PNG are allowed.</div>";
+                echo "<div class='alert alert-danger'>Invalid file type or size. Only JPG/PNG under 2MB allowed.</div>";
             }
         }
 
@@ -47,19 +50,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
         if ($result['success']) {
             echo "<div class='alert alert-success'>User added successfully!</div>";
         } else {
-            echo "<div class='alert alert-danger'>Error adding user: " . $result['error'] . "</div>";
+            echo "<div class='alert alert-danger'>Error adding user: " . htmlspecialchars($result['error']) . "</div>";
         }
     }
 }
 
 // Edit user
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
-    $user_id = $conn->real_escape_string($_POST['user_id']);
-    $username = $conn->real_escape_string($_POST['username']);
-    $role = $conn->real_escape_string($_POST['role']);
-    $first_name = $conn->real_escape_string($_POST['first_name']);
-    $last_name = $conn->real_escape_string($_POST['last_name']);
-    $email = $conn->real_escape_string($_POST['email']);
+    $user_id = $_POST['user_id'];
+    $username = $_POST['username'];
+    $role = strtolower($_POST['role']); // Normalize to match database
+    $first_name = $_POST['first_name'];
+    $last_name = $_POST['last_name'];
+    $email = $_POST['email'];
     
     $sql = "SELECT profile_image FROM users WHERE id = ?";
     $stmt = $conn->prepare($sql);
@@ -72,8 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
 
     if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == 0) {
         $allowed_types = ['image/jpeg', 'image/png'];
+        $max_size = 2 * 1024 * 1024; // 2MB limit
         $file_type = $_FILES['profile_image']['type'];
-        if (in_array($file_type, $allowed_types)) {
+        $file_size = $_FILES['profile_image']['size'];
+        
+        if (in_array($file_type, $allowed_types) && $file_size <= $max_size) {
             $target_dir = "assets/images/";
             $file_name = basename($_FILES['profile_image']['name']);
             $target_file = $target_dir . time() . "_" . $file_name;
@@ -83,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
                 echo "<div class='alert alert-danger'>Failed to upload new profile image.</div>";
             }
         } else {
-            echo "<div class='alert alert-danger'>Invalid file type. Only JPG and PNG are allowed.</div>";
+            echo "<div class='alert alert-danger'>Invalid file type or size. Only JPG/PNG under 2MB allowed.</div>";
         }
     }
 
@@ -92,19 +98,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_user'])) {
     if ($result['success']) {
         echo "<div class='alert alert-success'>User updated successfully!</div>";
     } else {
-        echo "<div class='alert alert-danger'>Error updating user: " . $result['error'] . "</div>";
+        echo "<div class='alert alert-danger'>Error updating user: " . htmlspecialchars($result['error']) . "</div>";
     }
 }
 
 // Delete user
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
-    $user_id = $conn->real_escape_string($_POST['user_id']);
+    $user_id = $_POST['user_id'];
     $sql = "DELETE FROM users WHERE id = ?";
     $result = safe_execute($conn, $sql, "i", $user_id);
     if ($result['success']) {
         echo "<div class='alert alert-success'>User deleted successfully!</div>";
     } else {
-        echo "<div class='alert alert-danger'>Error deleting user: " . $result['error'] . "</div>";
+        // Check if the error is due to a foreign key constraint
+        if (strpos($result['error'], 'foreign key constraint fails') !== false) {
+            echo "<div class='alert alert-danger'>Cannot delete or update this user because they are referenced as an instructor in one or more courses.</div>";
+        } else {
+            echo "<div class='alert alert-danger'>Error deleting user: " . htmlspecialchars($result['error']) . "</div>";
+        }
     }
 }
 ?>
@@ -132,9 +143,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
                     <div class="mb-3">
                         <label for="role" class="form-label">Role</label>
                         <select name="role" id="role" class="form-select" required>
-                            <option value="Admin">Admin</option>
-                            <option value="Instructor">Instructor</option>
-                            <option value="Student">Student</option>
+                            <option value="admin">Admin</option>
+                            <option value="teacher">Teacher</option>
+                            <option value="student">Student</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -174,9 +185,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
                     <div class="mb-3">
                         <label for="edit_role" class="form-label">Role</label>
                         <select name="role" id="edit_role" class="form-select" required>
-                            <option value="Admin">Admin</option>
-                            <option value="Instructor">Instructor</option>
-                            <option value="Student">Student</option>
+                            <option value="admin">Admin</option>
+                            <option value="teacher">Teacher</option>
+                            <option value="student">Student</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -194,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
                     <div class="mb-3">
                         <label for="edit_profile_image" class="form-label">Profile Image</label>
                         <input type="file" name="profile_image" id="edit_profile_image" class="form-control" accept="image/jpeg,image/png">
-                        <small class="form-text text-muted">Leave blank to keep current image (JPG, PNG only).</small>
+                        <small class="form-text text-muted">Leave blank to keep current image (JPG, PNG only, max 2MB).</small>
                     </div>
                     <button type="submit" name="edit_user" class="btn btn-primary">Update User</button>
                 </form>
@@ -206,20 +217,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_user'])) {
 <div id="userResults">
     <?php
     $users = $conn->query("SELECT * FROM users");
-    echo "<table class='table'><tr><th>ID</th><th>Username</th><th>Role</th><th>Name</th><th>Email</th><th>Image</th><th>Actions</th></tr>";
+    echo "<table class='table table-striped table-bordered'><thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Name</th><th>Email</th><th>Image</th><th>Actions</th></tr></thead><tbody>";
     while ($user = $users->fetch_assoc()) {
-        $image_path = "assets/images/{$user['profile_image']}";
-        echo "<tr><td>{$user['id']}</td><td>{$user['username']}</td><td>{$user['role']}</td><td>{$user['first_name']} {$user['last_name']}</td>
-              <td>{$user['email']}</td><td><img src='$image_path' alt='Profile' width='50' onerror=\"this.src='assets/images/default-avatar.png'\"></td>
-              <td><button class='btn btn-warning edit-user' data-id='{$user['id']}' data-username='{$user['username']}' 
-                  data-role='{$user['role']}' data-first='{$user['first_name']}' data-last='{$user['last_name']}' 
-                  data-email='{$user['email']}' data-bs-toggle='modal' data-bs-target='#editUserModal'>Edit</button>
+        $image_path = "assets/images/" . htmlspecialchars($user['profile_image']);
+        $username = htmlspecialchars($user['username']);
+        $role = htmlspecialchars($user['role']);
+        $first_name = htmlspecialchars($user['first_name']);
+        $last_name = htmlspecialchars($user['last_name']);
+        $email = htmlspecialchars($user['email']);
+        echo "<tr><td>{$user['id']}</td><td>$username</td><td>$role</td><td>$first_name $last_name</td>
+              <td>$email</td><td><img src='$image_path' alt='Profile' width='50' onerror=\"this.src='assets/images/default-avatar.png'\"></td>
+              <td><button class='btn btn-warning btn-sm edit-user' data-id='{$user['id']}' data-username='$username' 
+                  data-role='$role' data-first='$first_name' data-last='$last_name' 
+                  data-email='$email' data-bs-toggle='modal' data-bs-target='#editUserModal'>Edit</button>
                   <form method='POST' style='display:inline;' onsubmit='return confirm(\"Are you sure you want to delete this user?\");'>
                       <input type='hidden' name='user_id' value='{$user['id']}'>
-                      <button type='submit' name='delete_user' class='btn btn-danger'>Delete</button>
+                      <button type='submit' name='delete_user' class='btn btn-danger btn-sm'>Delete</button>
                   </form></td></tr>";
     }
-    echo "</table>";
+    echo "</tbody></table>";
     ?>
 </div>
 
