@@ -47,7 +47,7 @@ Before setting up the project, ensure you have the following installed:
    ```
 3. Clone the repository:
    ```
-   git clone (https://github.com/Smegne/student-managment-system/)
+   git clone https://github.com/Smegne/student-managment-system.git
    ```
 4. Navigate into the project folder:
    ```
