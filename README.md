@@ -47,7 +47,7 @@ Before setting up the project, ensure you have the following installed:
    ```
 3. Clone the repository:
    ```
-   git clone https://github.com/your-username/student-management-system.git
+   git clone (https://github.com/Smegne/student-managment-system/)
    ```
 4. Navigate into the project folder:
    ```
@@ -112,23 +112,7 @@ Before setting up the project, ensure you have the following installed:
 
 ---
 
-## Project Structure
-```
-student-management-system/
-├── assets/               # CSS, JS, and image files
-│   ├── css/              # Custom styles
-│   ├── js/               # Custom scripts
-│   └── img/              # Images
-├── includes/             # Reusable PHP files (e.g., header, footer)
-├── admin/                # Admin-specific pages (dashboard, student management)
-├── teacher/              # Teacher-specific pages
-├── student/              # Student-specific pages
-├── config.php            # Database configuration
-├── login.php             # Login page
-├── logout.php            # Logout functionality
-├── database.sql          # Database schema and sample data
-└── README.txt            # This file
-```
+
 
 ---
 
@@ -140,7 +124,7 @@ student-management-system/
    - Enroll students in courses under "Courses".
    - Track attendance in the "Attendance" section.
    - Manage user roles in the "Users" section.
-3. **Teacher**: View assigned students, mark attendance.
+3. **instructor**: View assigned students, mark attendance.
 4. **Student**: View enrolled courses and attendance records.
 
 ---
@@ -191,7 +175,7 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 ---
 
 ## Contact
-For questions or suggestions, reach out to [your-email@example.com].
+For questions or suggestions, reach out to [smegndestew2@gmail.com].
 ```
 
 ---
